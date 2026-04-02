@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IoT Dashboard – Đăng nhập</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--green:#00ff88;--red:#ff3b5c;--cyan:#00cfff;--amber:#ffcc00;--bg:#080d12;--border:rgba(255,255,255,0.10);--mono:'Share Tech Mono',monospace;--sans:'Barlow',sans-serif}
+html,body{height:100%;background:var(--bg);color:#fff;font-family:var(--sans);overflow:hidden}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.12) 2px,rgba(0,0,0,.12) 4px);pointer-events:none;z-index:100}
+.bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(0,207,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,207,255,.04) 1px,transparent 1px);background-size:48px 48px;animation:gridShift 20s linear infinite}
+@keyframes gridShift{from{background-position:0 0}to{background-position:48px 48px}}
+.particles{position:fixed;inset:0;z-index:0;overflow:hidden}
+.p{position:absolute;border-radius:50%;background:var(--cyan);opacity:0;animation:floatUp linear infinite}
+@keyframes floatUp{0%{transform:translateY(0) scale(1);opacity:0}10%{opacity:.25}90%{opacity:.08}100%{transform:translateY(-100vh) scale(.4);opacity:0}}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:52px;background:rgba(8,13,18,.88);border-bottom:1px solid var(--border);backdrop-filter:blur(8px)}
+.logo{font-family:var(--mono);font-size:13px;letter-spacing:3px;color:var(--green)}
+.logo span{color:rgba(255,255,255,.3)}
+.clock{font-family:var(--mono);font-size:18px;letter-spacing:2px}
+.sys-st{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.38);letter-spacing:1px}
+.pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.center{position:relative;z-index:10;display:flex;align-items:center;justify-content:center;min-height:100vh;padding-top:52px}
+.login-box{width:100%;max-width:420px;background:rgba(12,18,26,.94);border:1px solid var(--border);border-radius:8px;padding:40px 36px 36px;box-shadow:0 0 60px rgba(0,207,255,.06),0 24px 60px rgba(0,0,0,.7);backdrop-filter:blur(12px);position:relative;overflow:hidden;animation:boxIn .5s cubic-bezier(.16,1,.3,1) both}
+@keyframes boxIn{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.login-box::before,.login-box::after{content:'';position:absolute;width:20px;height:20px;border-color:var(--cyan);border-style:solid}
+.login-box::before{top:10px;left:10px;border-width:2px 0 0 2px}
+.login-box::after{bottom:10px;right:10px;border-width:0 2px 2px 0}
+.box-label{font-family:var(--mono);font-size:9px;letter-spacing:4px;color:var(--cyan);margin-bottom:6px}
+.box-title{font-size:22px;font-weight:700;letter-spacing:.5px;margin-bottom:28px}
+.box-title span{color:var(--green)}
+.step{display:none;animation:stepIn .35s ease both}
+.step.active{display:block}
+@keyframes stepIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+.progress{display:flex;gap:8px;justify-content:center;margin-bottom:24px}
+.prog-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.12);transition:background .3s,box-shadow .3s}
+.prog-dot.active{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+.prog-dot.done{background:var(--green)}
+.field{margin-bottom:16px}
+label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.4);margin-bottom:7px}
+input[type=email],input[type=password],input[type=number],input[type=text]{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:4px;padding:12px 14px;color:#fff;font-family:var(--mono);font-size:13px;letter-spacing:1px;outline:none;transition:border-color .25s,box-shadow .25s;-moz-appearance:textfield}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,207,255,.1)}
+input::placeholder{color:rgba(255,255,255,.2)}
+input.err{border-color:var(--red)!important}
+.error-msg{font-family:var(--mono);font-size:10px;color:var(--red);margin-top:6px;min-height:16px;letter-spacing:.5px}
+.otp-wrap{display:flex;gap:10px;justify-content:center;margin:8px 0 4px}
+.otp-wrap input{width:44px;height:52px;text-align:center;font-size:20px;letter-spacing:0;padding:0}
+.btn-primary{width:100%;padding:13px;background:transparent;border:1px solid var(--cyan);border-radius:4px;color:var(--cyan);font-family:var(--mono);font-size:12px;letter-spacing:3px;cursor:pointer;position:relative;overflow:hidden;transition:background .2s,opacity .2s;margin-top:8px}
+.btn-primary::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);transition:left .45s}
+.btn-primary:not(:disabled):hover::after{left:100%}
+.btn-primary:not(:disabled):hover{background:rgba(0,207,255,.08)}
+.btn-primary:disabled{opacity:.3;cursor:not-allowed}
+.btn-primary.loading{color:var(--amber);border-color:var(--amber);animation:blink .55s ease infinite alternate}
+.btn-primary.sbtn{color:var(--green);border-color:var(--green)}
+.btn-primary.signup-btn{color:var(--green);border-color:var(--green);margin-right:8px}
+@keyframes blink{from{opacity:1}to{opacity:.4}}
+.btn-nav{width:100%;padding:11px;background:transparent;border:1px solid rgba(255,255,255,.12);border-radius:4px;color:rgba(255,255,255,.5);font-family:var(--mono);font-size:11px;letter-spacing:2px;cursor:pointer;margin-top:10px;transition:border-color .2s,color .2s}
+.btn-nav:hover{border-color:rgba(255,255,255,.3);color:#fff}
+.divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:rgba(255,255,255,.2);font-family:var(--mono);font-size:10px;letter-spacing:2px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.resend-row{text-align:center;margin-top:14px;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.3)}
+.resend-row a{color:var(--cyan);cursor:pointer}
+.resend-row a:hover{text-decoration:underline}
+.locked-msg{display:none;text-align:center;padding:8px 0}
+.locked-msg.active{display:block}
+.locked-msg p{font-family:var(--mono);font-size:11px;color:var(--red);letter-spacing:1px;margin-bottom:4px}
+.lock-count{font-family:var(--mono);font-size:28px;color:var(--red);font-weight:700}
+.success-screen{text-align:center;padding:10px 0 6px}
+.success-icon{font-size:48px;margin-bottom:14px;animation:bounceIn .5s cubic-bezier(.36,.07,.19,.97) both}
+@keyframes bounceIn{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.15);opacity:1}100%{transform:scale(1)}}
+.success-title{font-size:18px;font-weight:700;color:var(--green);margin-bottom:8px}
+.success-sub{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.35);letter-spacing:1px;margin-bottom:24px}
+.btn-group{display:flex;gap:8px}
+.btn-group .btn-primary{flex:1}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="particles" id="particles"></div>
+<header class="topbar">
+  <div class="logo">IOT<span>/</span>SYS</div>
+  <div class="clock" id="clock">--:--:--</div>
+  <div class="sys-st"><div class="pulse-dot"></div>SYSTEM ONLINE</div>
+</header>
+<div class="center">
+  <div class="login-box">
+    <div class="box-label">ACCESS CONTROL</div>
+    <div class="box-title">IoT <span>Dashboard</span></div>
+    <div class="progress">
+      <div class="prog-dot active" id="pd0"></div>
+      <div class="prog-dot" id="pd1"></div>
+      <div class="prog-dot" id="pd2"></div>
+      <div class="prog-dot" id="pd3"></div>
+    </div>
+    
+    <!-- STEP 0: CHỌN LOẠI -->
+    <div class="step active" id="step0">
+      <div style="text-align:center;margin-bottom:24px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.5);letter-spacing:1px">
+        Chọn chế độ để tiếp tục
+      </div>
+      <button class="btn-primary signup-btn" onclick="goToLogin()" style="width:48%;display:inline-block">&#9658; ĐĂNG NHẬP</button>
+      <button class="btn-primary" onclick="goToSignup()" style="width:48%;display:inline-block;float:right">&#10133; ĐĂNG KÝ</button>
+      <div style="clear:both;margin-top:20px"></div>
+      <div class="divider">HOẶC</div>
+      <button class="btn-nav" onclick="window.location.href='khuonmat.html'">&#9711; XÁC THỰC KHUÔN MẶT</button>
+    </div>
+    
+    <!-- STEP 1: ĐĂNG NHẬP -->
+    <div class="step" id="step1">
+      <div class="field">
+        <label>EMAIL</label>
+        <input type="email" id="inp-email" placeholder="example@email.com" autocomplete="off">
+        <div class="error-msg" id="err-email"></div>
+      </div>
+      <div class="field">
+        <label>MẬT KHẨU</label>
+        <input type="password" id="inp-pass" placeholder="••••••••">
+        <div class="error-msg" id="err-pass"></div>
+      </div>
+      <button class="btn-primary" id="btn-login" onclick="doLogin()">&#9658; ĐĂNG NHẬP</button>
+      <div style="margin-top:14px;text-align:center;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.4);">
+        <a onclick="goToStep0()" style="color:var(--cyan);cursor:pointer;text-decoration:underline">← Quay lại</a>
+      </div>
+    </div>
+
+    <!-- STEP 1.5: ĐĂNG KÝ -->
+    <div class="step" id="step1signup">
+      <div class="field">
+        <label>TÊN ĐẦY ĐỦ</label>
+        <input type="text" id="inp-fullname" placeholder="Tên của bạn" autocomplete="off">
+        <div class="error-msg" id="err-fullname"></div>
+      </div>
+      <div class="field">
+        <label>EMAIL</label>
+        <input type="email" id="inp-reg-email" placeholder="example@email.com" autocomplete="off">
+        <div class="error-msg" id="err-reg-email"></div>
+      </div>
+      <div class="field">
+        <label>MẬT KHẨU (tối thiểu 6 ký tự)</label>
+        <input type="password" id="inp-reg-pass" placeholder="••••••••">
+        <div class="error-msg" id="err-reg-pass"></div>
+      </div>
+      <div class="field">
+        <label>XÁC NHẬN MẬT KHẨU</label>
+        <input type="password" id="inp-reg-pass2" placeholder="••••••••">
+        <div class="error-msg" id="err-reg-pass2"></div>
+      </div>
+      <button class="btn-primary signup-btn" id="btn-register" onclick="doRegister()">✓ ĐĂNG KÝ</button>
+      <div style="margin-top:14px;text-align:center;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.4);">
+        <a onclick="goToStep0()" style="color:var(--cyan);cursor:pointer;text-decoration:underline">← Quay lại</a>
+      </div>
+    </div>
+    
+    <!-- STEP 2: XÁC NHẬN OTP -->
+    <div class="step" id="step2">
+      <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.45);letter-spacing:1px;margin-bottom:18px;line-height:1.7">
+        Mã OTP 6 chữ số đã gửi đến<br>
+        <span style="color:var(--cyan)" id="show-email">---</span>
+      </div>
+      <label>NHẬP MÃ XÁC NHẬN</label>
+      <div class="otp-wrap">
+        <input type="number" id="o0" oninput="otpInput(0)" onkeydown="otpKey(event,0)">
+        <input type="number" id="o1" oninput="otpInput(1)" onkeydown="otpKey(event,1)">
+        <input type="number" id="o2" oninput="otpInput(2)" onkeydown="otpKey(event,2)">
+        <input type="number" id="o3" oninput="otpInput(3)" onkeydown="otpKey(event,3)">
+        <input type="number" id="o4" oninput="otpInput(4)" onkeydown="otpKey(event,4)">
+        <input type="number" id="o5" oninput="otpInput(5)" onkeydown="otpKey(event,5)">
+      </div>
+      <div class="error-msg" id="err-otp" style="text-align:center"></div>
+      <div class="locked-msg" id="locked-msg">
+        <p>&#9888; QUÁ 3 LẦN SAI – HỆ THỐNG KHÓA</p>
+        <div class="lock-count" id="lock-count">15</div>
+        <p style="font-size:9px;margin-top:4px">GIÂY</p>
+      </div>
+      <button class="btn-primary" id="btn-verify" onclick="doVerify()">&#10003; XÁC NHẬN</button>
+      <div class="resend-row">Không nhận được? <a id="resend-link" onclick="resendOTP()">Gửi lại</a><span id="resend-cd"></span></div>
+    </div>
+    
+    <!-- STEP 3: THÀNH CÔNG -->
+    <div class="step" id="step3">
+      <div class="success-screen">
+        <div class="success-icon">&#9989;</div>
+        <div class="success-title">XÁC THỰC THÀNH CÔNG</div>
+        <div class="success-sub">ĐANG CHUYỂN ĐẾN DASHBOARD...</div>
+        <button class="btn-primary sbtn" onclick="window.location.href='index.html'">&#9658; VÀO DASHBOARD</button>
+        <button class="btn-nav" onclick="window.location.href='khuonmat.html'" style="margin-top:12px">&#9711; CỔNG NHẬN DIỆN KHUÔN MẶT</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function tick(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('vi-VN',{hour12:false});setTimeout(tick,1000)})();
+(function(){const c=document.getElementById('particles');for(let i=0;i<22;i++){const d=document.createElement('div');d.className='p';const s=2+Math.random()*3;d.style.cssText='width:'+s+'px;height:'+s+'px;left:'+Math.random()*100+'%;bottom:-10px;animation-duration:'+(6+Math.random()*12)+'s;animation-delay:'+Math.random()*12+'s';c.appendChild(d)}})();
+
+// Tài khoản demo
+const DEFAULT_ACCOUNTS={'admin@iot.vn':'123456','user@iot.vn':'abc123'};
+let ACCOUNTS = {...DEFAULT_ACCOUNTS};
+
+// Load tài khoản từ localStorage
+function loadAccounts(){
+  const saved = localStorage.getItem('iot_accounts');
+  if(saved){
+    ACCOUNTS = {...DEFAULT_ACCOUNTS, ...JSON.parse(saved)};
+  }
+}
+
+// Lưu tài khoản mới vào localStorage
+function saveNewAccount(email, password){
+  ACCOUNTS[email] = password;
+  let saved = localStorage.getItem('iot_accounts') || '{}';
+  let accounts = JSON.parse(saved);
+  accounts[email] = password;
+  localStorage.setItem('iot_accounts', JSON.stringify(accounts));
+}
+
+loadAccounts();
+
+let currentEmail='',generatedOTP='',otpAttempts=0,lockTimer=null,resendInterval=null,isSignupFlow=false;
+
+function setStep(n){[0,1,1.5,2,3].forEach(i=>{
+  let stepId = 'step'+i;
+  if(i===1.5) stepId = 'step1signup';
+  const el = document.getElementById(stepId);
+  if(!el) return;
+  el.classList.toggle('active', Math.floor(i)===Math.floor(n) && (i===n||i!==1.5));
+  const pdIdx = i<2 ? 0 : (i<3 ? 1 : 2);
+  if(i<2) {
+    const pd = document.getElementById('pd'+pdIdx);
+    if(pd) {
+      pd.classList.toggle('done', n>i);
+      pd.classList.toggle('active', n===i && n<2);
+    }
+  }
+});
+}
+
+function goToStep0(){
+  setStep(0);
+  clearForm();
+}
+
+function goToLogin(){
+  isSignupFlow = false;
+  document.getElementById('step1signup').classList.remove('active');
+  document.getElementById('step1').classList.add('active');
+  document.getElementById('pd0').classList.add('active');
+  document.getElementById('inp-email').focus();
+}
+
+function goToSignup(){
+  isSignupFlow = true;
+  document.getElementById('step1').classList.remove('active');
+  document.getElementById('step1signup').classList.add('active');
+  document.getElementById('pd0').classList.add('active');
+  document.getElementById('inp-fullname').focus();
+}
+
+function clearForm(){
+  document.getElementById('inp-email').value='';
+  document.getElementById('inp-pass').value='';
+  document.getElementById('inp-fullname').value='';
+  document.getElementById('inp-reg-email').value='';
+  document.getElementById('inp-reg-pass').value='';
+  document.getElementById('inp-reg-pass2').value='';
+  clearErrors();
+}
+
+function clearErrors(){
+  ['err-email','err-pass','err-fullname','err-reg-email','err-reg-pass','err-reg-pass2'].forEach(id=>{
+    document.getElementById(id).textContent='';
+  });
+  ['inp-email','inp-pass','inp-fullname','inp-reg-email','inp-reg-pass','inp-reg-pass2'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('err');
+  });
+}
+
+function doRegister(){
+  clearErrors();
+  const fullname = document.getElementById('inp-fullname').value.trim();
+  const email = document.getElementById('inp-reg-email').value.trim().toLowerCase();
+  const pass = document.getElementById('inp-reg-pass').value;
+  const pass2 = document.getElementById('inp-reg-pass2').value;
+  
+  if(!fullname){
+    document.getElementById('inp-fullname').classList.add('err');
+    document.getElementById('err-fullname').textContent='Vui lòng nhập tên đầy đủ';
+    return;
+  }
+  if(!email){
+    document.getElementById('inp-reg-email').classList.add('err');
+    document.getElementById('err-reg-email').textContent='Vui lòng nhập email';
+    return;
+  }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    document.getElementById('inp-reg-email').classList.add('err');
+    document.getElementById('err-reg-email').textContent='Email không hợp lệ';
+    return;
+  }
+  if(ACCOUNTS[email]){
+    document.getElementById('inp-reg-email').classList.add('err');
+    document.getElementById('err-reg-email').textContent='Email đã tồn tại';
+    return;
+  }
+  if(!pass || pass.length<6){
+    document.getElementById('inp-reg-pass').classList.add('err');
+    document.getElementById('err-reg-pass').textContent='Mật khẩu tối thiểu 6 ký tự';
+    return;
+  }
+  if(pass!==pass2){
+    document.getElementById('inp-reg-pass2').classList.add('err');
+    document.getElementById('err-reg-pass2').textContent='Mật khẩu không khớp';
+    return;
+  }
+  
+  saveNewAccount(email, pass);
+  currentEmail = email;
+  const btn = document.getElementById('btn-register');
+  btn.classList.add('loading');
+  btn.disabled = true;
+  btn.textContent = 'ĐANG ĐĂNG KÝ...';
+  
+  setTimeout(()=>{
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    btn.textContent = '✓ ĐĂNG KÝ';
+    document.getElementById('step1signup').classList.remove('active');
+    document.getElementById('step2').classList.add('active');
+    document.getElementById('pd0').classList.remove('active');
+    document.getElementById('pd1').classList.add('active');
+    sendOTP();
+  }, 1100);
+}
+
+function doLogin(){
+  clearErrors();
+  const email=document.getElementById('inp-email').value.trim().toLowerCase();
+  const pass=document.getElementById('inp-pass').value;
+  const btn=document.getElementById('btn-login');
+  
+  if(!email){document.getElementById('inp-email').classList.add('err');document.getElementById('err-email').textContent='Vui lòng nhập email';return}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){document.getElementById('inp-email').classList.add('err');document.getElementById('err-email').textContent='Email không hợp lệ';return}
+  if(!pass){document.getElementById('inp-pass').classList.add('err');document.getElementById('err-pass').textContent='Vui lòng nhập mật khẩu';return}
+  if(!ACCOUNTS[email]||ACCOUNTS[email]!==pass){document.getElementById('inp-pass').classList.add('err');document.getElementById('err-pass').textContent='Email hoặc mật khẩu sai';return}
+  btn.classList.add('loading');btn.disabled=true;btn.textContent='ĐANG XÁC NHẬN...';currentEmail=email;
+  setTimeout(()=>{btn.classList.remove('loading');btn.disabled=false;btn.textContent='ĐĂNG NHẬP';
+    document.getElementById('step1').classList.remove('active');
+    document.getElementById('step2').classList.add('active');
+    document.getElementById('pd0').classList.remove('active');
+    document.getElementById('pd1').classList.add('active');
+    sendOTP();
+  },1100)
+}
+
+function sendOTP(){
+  generatedOTP=String(Math.floor(100000+Math.random()*900000));otpAttempts=0;
+  document.getElementById('show-email').textContent=currentEmail;
+  document.getElementById('err-otp').textContent='';
+  document.getElementById('locked-msg').classList.remove('active');
+  document.getElementById('btn-verify').disabled=false;
+  clearOTPInputs();
+  console.log('%c[DEMO] Mã OTP: '+generatedOTP,'color:#00ff88;font-size:16px;font-weight:bold;font-family:monospace');
+  showToast('[DEMO] Mã OTP của bạn: '+generatedOTP,5000);startResend(60)
+}
+function clearOTPInputs(){for(let i=0;i<6;i++){const el=document.getElementById('o'+i);el.value='';el.classList.remove('err')}document.getElementById('o0').focus()}
+function otpInput(i){const el=document.getElementById('o'+i);el.value=el.value.toString().replace(/[^0-9]/g,'').slice(-1);if(el.value&&i<5)document.getElementById('o'+(i+1)).focus()}
+function otpKey(e,i){if(e.key==='Backspace'&&!document.getElementById('o'+i).value&&i>0)document.getElementById('o'+(i-1)).focus();if(e.key==='Enter')doVerify()}
+function getOTP(){return[0,1,2,3,4,5].map(i=>document.getElementById('o'+i).value).join('')}
+function doVerify(){
+  const entered=getOTP();
+  if(entered.length<6){document.getElementById('err-otp').textContent='Nhập đủ 6 chữ số';return}
+  const btn=document.getElementById('btn-verify');
+  btn.classList.add('loading');btn.disabled=true;btn.textContent='ĐANG XÁC NHẬN...';
+  setTimeout(()=>{
+    btn.classList.remove('loading');btn.textContent='XÁC NHẬN';
+    if(entered===generatedOTP){
+      btn.classList.add('sbtn');btn.textContent='ĐÚNG MÃ';clearInterval(resendInterval);
+      sessionStorage.setItem('iot_auth','1');
+      sessionStorage.setItem('iot_user',currentEmail);
+      setTimeout(()=>{
+        document.getElementById('step2').classList.remove('active');
+        document.getElementById('step3').classList.add('active');
+        document.getElementById('pd1').classList.remove('active');
+        document.getElementById('pd2').classList.add('active');
+      },700);
+    }
+    else{otpAttempts++;btn.disabled=false;document.getElementById('err-otp').textContent='Mã sai – '+otpAttempts+'/3 lần thử';for(let i=0;i<6;i++)document.getElementById('o'+i).classList.add('err');if(otpAttempts>=3)triggerLock()}
+  },900)
+}
+function triggerLock(){
+  document.getElementById('btn-verify').disabled=true;document.getElementById('locked-msg').classList.add('active');document.getElementById('err-otp').textContent='';
+  let left=15;document.getElementById('lock-count').textContent=left;clearInterval(lockTimer);
+  lockTimer=setInterval(()=>{left--;document.getElementById('lock-count').textContent=left;if(left<=0){clearInterval(lockTimer);document.getElementById('locked-msg').classList.remove('active');document.getElementById('btn-verify').disabled=false;document.getElementById('err-otp').textContent='';sendOTP()}},1000)
+}
+function resendOTP(){if(document.getElementById('resend-link').dataset.disabled)return;clearOTPInputs();document.getElementById('err-otp').textContent='';sendOTP()}
+function startResend(sec){
+  clearInterval(resendInterval);const link=document.getElementById('resend-link');const cd=document.getElementById('resend-cd');
+  link.dataset.disabled='1';link.style.opacity='.35';link.style.cursor='default';let left=sec;cd.textContent=' ('+left+'s)';
+  resendInterval=setInterval(()=>{left--;if(left<=0){clearInterval(resendInterval);cd.textContent='';delete link.dataset.disabled;link.style.opacity='';link.style.cursor='pointer'}else cd.textContent=' ('+left+'s)'},1000)
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('step1').classList.contains('active'))doLogin()});
+function showToast(msg,dur){
+  let t=document.getElementById('_toast');
+  if(!t){t=document.createElement('div');t.id='_toast';Object.assign(t.style,{position:'fixed',bottom:'28px',left:'50%',transform:'translateX(-50%)',background:'rgba(12,18,26,.97)',border:'1px solid #00ff88',color:'#00ff88',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px',letterSpacing:'1px',padding:'10px 22px',borderRadius:'4px',zIndex:'200',boxShadow:'0 0 20px rgba(0,255,136,.15)',transition:'opacity .4s',opacity:'0',whiteSpace:'nowrap'});document.body.appendChild(t)}
+  t.textContent=msg;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',dur)
+}
+</script>
+</body>
+</html>

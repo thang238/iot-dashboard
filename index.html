@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<script>
+if (sessionStorage.getItem("iot_auth") !== "1") { window.location.href = "login.html"; }
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IoT Dashboard – Hệ thống thông minh</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #1a202c; }
+
+header {
+  background: #1a202c; color: #fff;
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+}
+header h1 { font-size: 17px; font-weight: 600; }
+#conn-status {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; padding: 4px 14px; border-radius: 20px;
+  background: rgba(255,255,255,.1);
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #fc8181; transition: background .3s; }
+.dot.on { background: #68d391; box-shadow: 0 0 6px #68d391; animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.4} }
+
+main { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
+
+/* ---- Stat cards ---- */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.stat-card {
+  background: #fff; border-radius: 12px; padding: 18px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  border-top: 4px solid #e2e8f0;
+}
+.stat-card.red    { border-top-color: #fc8181; }
+.stat-card.blue   { border-top-color: #63b3ed; }
+.stat-card.amber  { border-top-color: #f6ad55; }
+.stat-card.green  { border-top-color: #68d391; }
+.stat-card.purple { border-top-color: #b794f4; }
+.slabel { font-size: 11px; color: #718096; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+.sval   { font-size: 32px; font-weight: 700; line-height: 1; }
+.sunit  { font-size: 13px; color: #a0aec0; margin-top: 4px; }
+.sbadge {
+  display: inline-block; margin-top: 6px;
+  padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+}
+.ok   { background: #c6f6d5; color: #276749; }
+.hot  { background: #fed7d7; color: #9b2c2c; }
+.bat  { background: #fefcbf; color: #744210; }
+.tat  { background: #e2e8f0; color: #4a5568; }
+.coxe { background: #fed7d7; color: #9b2c2c; }
+.khong{ background: #c6f6d5; color: #276749; }
+.mo   { background: #bee3f8; color: #2b6cb0; }
+.dong { background: #e2e8f0; color: #4a5568; }
+
+/* ---- Charts ---- */
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+@media(max-width:700px){ .chart-grid { grid-template-columns:1fr; } }
+.chart-card { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.chart-card h3 { font-size: 13px; color: #718096; font-weight: 600; margin-bottom: 12px; }
+.chart-wrap { position: relative; height: 200px; }
+
+/* ---- Table ---- */
+.table-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.08); overflow: hidden; margin-bottom: 20px; }
+.table-top  { padding: 14px 18px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.table-top h3 { font-size: 14px; font-weight: 600; color: #4a5568; }
+.tabs { display: flex; gap: 4px; }
+.tab {
+  padding: 5px 14px; border: none; border-radius: 8px; font-size: 13px;
+  background: #edf2f7; color: #4a5568; cursor: pointer; transition: all .2s;
+}
+.tab.active { background: #1a202c; color: #fff; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { padding: 9px 14px; text-align: left; font-size: 11px; text-transform: uppercase; color: #718096; background: #f7fafc; border-bottom: 1px solid #e2e8f0; }
+td { padding: 9px 14px; border-bottom: 1px solid #f0f4f8; }
+tr:last-child td { border-bottom: none; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+.footer { text-align: center; font-size: 12px; color: #a0aec0; padding: 12px 0 24px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>IoT Dashboard – Hệ thống thông minh</h1>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <button onclick="window.location.href='khuonmat.html'" style="display:flex;align-items:center;gap:7px;padding:6px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='rgba(255,255,255,.18)'" onmouseout="this.style.background='rgba(255,255,255,.08)'">
+      🎭 Nhận diện khuôn mặt
+    </button>
+    <div id="conn-status">
+      <div class="dot" id="dot"></div>
+      <span id="conn-text">Đang kết nối MQTT...</span>
+    </div>
+    <div id="user-info" style="display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 12px;background:rgba(255,255,255,.07);border-radius:20px;border:1px solid rgba(255,255,255,.15);">
+      <span>👤</span><span id="user-email" style="opacity:.8"></span>
+    </div>
+    <button onclick="doLogout()" style="padding:6px 14px;background:rgba(252,129,129,.15);border:1px solid rgba(252,129,129,.4);border-radius:6px;color:#fc8181;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='rgba(252,129,129,.28)'" onmouseout="this.style.background='rgba(252,129,129,.15)'">
+      ⏏ Đăng xuất
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <!-- Stat cards -->
+  <div class="stat-grid">
+    <div class="stat-card red">
+      <div class="slabel">Nhiệt độ</div>
+      <div class="sval" id="s-temp">--</div>
+      <div class="sunit">°C</div>
+      <div><span class="sbadge ok" id="b-temp">--</span></div>
+    </div>
+    <div class="stat-card blue">
+      <div class="slabel">Độ ẩm</div>
+      <div class="sval" id="s-doam">--</div>
+      <div class="sunit">%RH</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="slabel">Khoảng cách</div>
+      <div class="sval" id="s-dist">--</div>
+      <div class="sunit">cm</div>
+      <div><span class="sbadge" id="b-dist">--</span></div>
+    </div>
+    <div class="stat-card green">
+      <div class="slabel">Ánh sáng (Lux)</div>
+      <div class="sval" id="s-lux">--</div>
+      <div class="sunit">lux</div>
+      <div><span class="sbadge" id="b-led">--</span></div>
+    </div>
+    <div class="stat-card purple">
+      <div class="slabel">Thẻ RFID gần nhất</div>
+      <div class="sval" style="font-size:16px;margin-top:6px" id="s-uid">--</div>
+      <div><span class="sbadge" id="b-cong">--</span></div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-grid">
+    <div class="chart-card">
+      <h3>Nhiệt độ &amp; Độ ẩm</h3>
+      <div class="chart-wrap"><canvas id="chart-dht"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Khoảng cách (cm)</h3>
+      <div class="chart-wrap"><canvas id="chart-dist"></canvas></div>
+    </div>
+  </div>
+
+  <!-- History table -->
+  <div class="table-card">
+    <div class="table-top">
+      <h3>Lịch sử dữ liệu</h3>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('nhietdo',this)">Nhiệt độ</button>
+        <button class="tab" onclick="switchTab('distance',this)">Khoảng cách</button>
+        <button class="tab" onclick="switchTab('led',this)">Ánh sáng</button>
+        <button class="tab" onclick="switchTab('card',this)">RFID</button>
+      </div>
+    </div>
+    <div id="table-body"></div>
+  </div>
+
+  <div class="footer" id="footer">Tự động làm mới mỗi 5 giây</div>
+</main>
+
+<script>
+// ============================================================
+//  Cấu hình MQTT
+// ============================================================
+const BROKER  = "broker.emqx.io";
+const WS_PORT = 8083;
+const TOPICS  = {
+  dht:      "iotsys/dht",
+  distance: "iotsys/distance",
+  light:    "iotsys/light",
+  card:     "iotsys/card",
+};
+
+const mqttClient = new Paho.MQTT.Client(
+  BROKER, WS_PORT, "web_" + Math.random().toString(16).slice(2,10)
+);
+
+let lastMsg = 0;
+
+// ---- Nhận tin nhắn MQTT -----------------------------------
+mqttClient.onMessageArrived = function(msg) {
+  lastMsg = Date.now();
+  setOnline(true);
+
+  let data;
+  try { data = JSON.parse(msg.payloadString); } catch(e) { return; }
+
+  switch (msg.destinationName) {
+
+    case TOPICS.dht:
+      document.getElementById("s-temp").textContent = parseFloat(data.nhietdo).toFixed(1);
+      document.getElementById("s-doam").textContent = parseFloat(data.doam).toFixed(1);
+      const bTemp = document.getElementById("b-temp");
+      bTemp.textContent = data.canhbao === "HOT" ? "NÓNG" : "Bình thường";
+      bTemp.className   = "sbadge " + (data.canhbao === "HOT" ? "hot" : "ok");
+      $.get("insert_dht.php?nhietdo="+data.nhietdo+"&doam="+data.doam+"&canhbao="+data.canhbao);
+      break;
+
+    case TOPICS.distance:
+      document.getElementById("s-dist").textContent = parseFloat(data.khoangcach).toFixed(1);
+      const bDist = document.getElementById("b-dist");
+      bDist.textContent = data.trangthai === "CO_XE" ? "Có xe" : "Trống";
+      bDist.className   = "sbadge " + (data.trangthai === "CO_XE" ? "coxe" : "khong");
+      $.get("insert_distance.php?khoangcach="+data.khoangcach+"&trangthai="+data.trangthai);
+      break;
+
+    case TOPICS.light:
+      document.getElementById("s-lux").textContent = parseFloat(data.dosang).toFixed(0);
+      const bLed = document.getElementById("b-led");
+      bLed.textContent = data.trangthaiden === "BAT" ? "Đèn BẬT" : "Đèn TẮT";
+      bLed.className   = "sbadge " + (data.trangthaiden === "BAT" ? "bat" : "tat");
+      $.get("insert_led.php?dosang="+data.dosang+"&trangthaiden="+data.trangthaiden);
+      break;
+
+    case TOPICS.card:
+      document.getElementById("s-uid").textContent = data.ttcard || "--";
+      const bCong = document.getElementById("b-cong");
+      bCong.textContent = data.trangthaicong === "MO" ? "Cổng MỞ" : "Cổng ĐÓNG";
+      bCong.className   = "sbadge " + (data.trangthaicong === "MO" ? "mo" : "dong");
+      $.get("insert_card.php?ttcard="+data.ttcard+"&trangthaicong="+data.trangthaicong);
+      break;
+  }
+};
+
+mqttClient.onConnectionLost = function() {
+  setOnline(false);
+  setTimeout(connectMQTT, 3000);
+};
+
+function connectMQTT() {
+  mqttClient.connect({
+    onSuccess: function() {
+      Object.values(TOPICS).forEach(t => mqttClient.subscribe(t));
+      setOnline(true);
+    },
+    onFailure: function() {
+      setOnline(false);
+      setTimeout(connectMQTT, 5000);
+    }
+  });
+}
+
+function setOnline(on) {
+  document.getElementById("dot").className       = "dot" + (on ? " on" : "");
+  document.getElementById("conn-text").textContent = on ? "MQTT Online" : "MQTT Offline – đang kết nối lại...";
+}
+
+// Phát hiện mất tín hiệu
+setInterval(() => { if (lastMsg > 0 && Date.now() - lastMsg > 12000) setOnline(false); }, 2000);
+
+// ============================================================
+//  Charts
+// ============================================================
+let chartDHT = null, chartDist = null;
+
+function initCharts() {
+  const baseOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { font: {size:11} } } },
+    scales: {
+      x: { ticks: { font:{size:10}, maxTicksLimit:8 }, grid: { color:'rgba(0,0,0,.04)' } },
+      y: { ticks: { font:{size:10} }, grid: { color:'rgba(0,0,0,.04)' } }
+    }
+  };
+
+  chartDHT = new Chart(document.getElementById("chart-dht"), {
+    type: "line",
+    data: { labels: [], datasets: [
+      { label:"Nhiệt độ (°C)", data:[], borderColor:"#fc8181", backgroundColor:"rgba(252,129,129,.1)", tension:.4, fill:true, pointRadius:2 },
+      { label:"Độ ẩm (%)",     data:[], borderColor:"#63b3ed", backgroundColor:"rgba(99,179,237,.08)", tension:.4, fill:true, pointRadius:2 },
+    ]},
+    options: baseOpts
+  });
+
+  chartDist = new Chart(document.getElementById("chart-dist"), {
+    type: "line",
+    data: { labels: [], datasets: [
+      { label:"Khoảng cách (cm)", data:[], borderColor:"#f6ad55", backgroundColor:"rgba(246,173,85,.1)", tension:.4, fill:true, pointRadius:2 },
+    ]},
+    options: baseOpts
+  });
+}
+
+function loadCharts() {
+  fetch("get_all.php?table=nhietdo&limit=20")
+    .then(r => r.json()).then(res => {
+      if (!res.data) return;
+      chartDHT.data.labels           = res.data.map(x => x.thoigian.slice(11,16));
+      chartDHT.data.datasets[0].data = res.data.map(x => parseFloat(x.nhietdo));
+      chartDHT.data.datasets[1].data = res.data.map(x => parseFloat(x.doam));
+      chartDHT.update('none');
+    }).catch(()=>{});
+
+  fetch("get_all.php?table=distance&limit=20")
+    .then(r => r.json()).then(res => {
+      if (!res.data) return;
+      chartDist.data.labels           = res.data.map(x => x.thoigian.slice(11,16));
+      chartDist.data.datasets[0].data = res.data.map(x => parseFloat(x.khoangcach));
+      chartDist.update('none');
+    }).catch(()=>{});
+}
+
+// ============================================================
+//  History table
+// ============================================================
+let currentTab = 'nhietdo';
+
+const COL_DEF = {
+  nhietdo:  { heads:['#','Nhiệt độ (°C)','Độ ẩm (%)','Cảnh báo','Thời gian'], cols:['id','nhietdo','doam','canhbao','thoigian'] },
+  distance: { heads:['#','Khoảng cách (cm)','Trạng thái','Thời gian'],          cols:['id','khoangcach','trangthai','thoigian'] },
+  led:      { heads:['#','Độ sáng (lux)','Đèn','Thời gian'],                    cols:['id','dosang','trangthaiden','thoigian'] },
+  card:     { heads:['#','UID Thẻ','Trạng thái cổng','Thời gian'],               cols:['id','ttcard','trangthaicong','thoigian'] },
+};
+
+const BADGE_MAP = {
+  'HOT':'<span class="badge hot">NÓNG</span>',
+  'OK':'<span class="badge ok">Bình thường</span>',
+  'CO_XE':'<span class="badge coxe">Có xe</span>',
+  'KHONG_XE':'<span class="badge khong">Trống</span>',
+  'BAT':'<span class="badge bat">BẬT</span>',
+  'TAT':'<span class="badge tat">TẮT</span>',
+  'MO':'<span class="badge mo">MỞ</span>',
+  'DONG':'<span class="badge dong">ĐÓNG</span>',
+};
+
+function renderCell(col, val) {
+  if (!val && val !== 0) return '—';
+  if (BADGE_MAP[val]) return BADGE_MAP[val];
+  if (col === 'nhietdo' || col === 'dosang' || col === 'khoangcach') return parseFloat(val).toFixed(1);
+  if (col === 'doam') return parseFloat(val).toFixed(0);
+  return val;
+}
+
+function loadTable() {
+  const def = COL_DEF[currentTab];
+  fetch("get_all.php?table=" + currentTab + "&limit=30")
+    .then(r => r.json()).then(res => {
+      if (!res.data || res.data.length === 0) {
+        document.getElementById("table-body").innerHTML = '<div style="text-align:center;padding:24px;color:#a0aec0;font-size:13px">Chưa có dữ liệu</div>';
+        return;
+      }
+      // Đảo lại để mới nhất lên đầu
+      const rows = [...res.data].reverse();
+      let html = '<table><thead><tr>' + def.heads.map(h=>`<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+      rows.forEach(row => {
+        html += '<tr>' + def.cols.map(c => `<td>${renderCell(c, row[c])}</td>`).join('') + '</tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById("table-body").innerHTML = html;
+    }).catch(()=>{});
+}
+
+function switchTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadTable();
+}
+
+// ============================================================
+//  Khởi động
+// ============================================================
+initCharts();
+connectMQTT();
+loadCharts();
+loadTable();
+
+setInterval(loadCharts, 5000);
+setInterval(loadTable,  5000);
+setInterval(() => {
+  document.getElementById("footer").textContent =
+    "Cập nhật lần cuối: " + new Date().toLocaleTimeString('vi-VN');
+}, 5000);
+
+// Auth & logout
+document.getElementById('user-email').textContent = sessionStorage.getItem('iot_user') || '';
+function doLogout() {
+  if (confirm('Bạn có chắc muốn đăng xuất?')) {
+    sessionStorage.removeItem('iot_auth');
+    sessionStorage.removeItem('iot_user');
+    window.location.href = 'login.html';
+  }
+}
+</script>
+</body>
+</html>
